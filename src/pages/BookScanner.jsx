@@ -1,8 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import Camera from '../components/Camera';
-import ResultDisplay from '../components/ResultDisplay';
-import { performOCR, categorizeBook, initializeOCR, cleanupOCR } from '../utils/ocrUtils';
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import Camera from "../components/Camera";
+import ResultDisplay from "../components/ResultDisplay";
+import {
+  performOCR,
+  categorizeBook,
+  initializeOCR,
+  cleanupOCR,
+} from "../utils/ocrUtils";
 
 const BookScanner = () => {
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -19,8 +24,8 @@ const BookScanner = () => {
         await initializeOCR();
         setOcrInitialized(true);
       } catch (error) {
-        console.error('Failed to initialize OCR:', error);
-        setError('OCR initialization failed. Please refresh the page.');
+        console.error("Failed to initialize OCR:", error);
+        setError("OCR initialization failed. Please refresh the page.");
       }
     };
 
@@ -54,31 +59,37 @@ const BookScanner = () => {
 
     try {
       if (!ocrInitialized) {
-        throw new Error('OCR not ready. Please wait and try again.');
+        throw new Error("OCR not ready. Please wait and try again.");
       }
 
       const { text, confidence } = await performOCR(imageData);
-      
+
       if (!text.trim()) {
-        throw new Error('No text detected. Please ensure the image contains clear text.');
+        throw new Error(
+          "No text detected. Please ensure the image contains clear text."
+        );
       }
-      
-      const category = await categorizeBook(text);
+
+      const categoryResult = await categorizeBook(text);
 
       setScanResult({
         extractedText: text,
-        category,
-        confidence
+        ocrConfidence: confidence,
+        category: categoryResult.category,
+        rackId: categoryResult.rackId,
+        confidence: categoryResult.confidence,
+        matchedKeywords: categoryResult.matchedKeywords,
       });
-      
     } catch (error) {
-      console.error('Processing error:', error);
+      console.error("Processing error:", error);
       setError(error.message);
-      
+
       setScanResult({
-        extractedText: 'Error processing image',
-        category: 'Error: Processing failed',
-        confidence: 0
+        extractedText: "Error processing image",
+        category: "Error: Processing failed",
+        rackId: "N/A",
+        confidence: 0,
+        matchedKeywords: [],
       });
     } finally {
       setIsProcessing(false);
@@ -124,7 +135,7 @@ const BookScanner = () => {
             {/* Upload Button */}
             <div className="border-4 border-black bg-blue-100 p-6 shadow-[8px_8px_0_0_#000]">
               <h2 className="text-xl font-bold mb-4">UPLOAD IMAGE</h2>
-              <button 
+              <button
                 onClick={() => fileInputRef.current.click()}
                 className="w-full border-2 border-black bg-white px-6 py-3 font-bold shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] transition-all"
               >
@@ -146,12 +157,10 @@ const BookScanner = () => {
               <button
                 onClick={handleCameraToggle}
                 className={`w-full border-2 border-black px-6 py-3 font-bold shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] transition-all ${
-                  isCameraActive
-                    ? 'bg-red-500 text-white'
-                    : 'bg-white'
+                  isCameraActive ? "bg-red-500 text-white" : "bg-white"
                 }`}
               >
-                {isCameraActive ? '🛑 STOP CAMERA' : '📷 START CAMERA'}
+                {isCameraActive ? "🛑 STOP CAMERA" : "📷 START CAMERA"}
               </button>
             </div>
 

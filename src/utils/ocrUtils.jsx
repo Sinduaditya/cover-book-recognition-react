@@ -92,32 +92,60 @@ export const performOCR = async (imageData) => {
   }
 };
 
+
+
 export const categorizeBook = async (text) => {
   try {
-    const lowerText = text.toLowerCase();
-    let bestCategory = '99-Lainnya';
-    let bestScore = 0;
+    const response = await fetch('/data/book_categories.json');
+    const categories = await response.json();
     
-    for (const category of categoriesData) {
-      let score = 0;
-      for (const keyword of category.keywords) {
-        if (lowerText.includes(keyword.toLowerCase())) {
-          score += 1;
+    const cleanText = text.toLowerCase();
+    let bestMatch = null;
+    let highestScore = 0;
+    let matchedKeywords = [];
+
+    categories.forEach(category => {
+      let categoryScore = 0;
+      let categoryMatches = [];
+
+      category.keywords.forEach(keyword => {
+        if (cleanText.includes(keyword.toLowerCase())) {
+          const keywordScore = keyword.length; // Longer keywords get higher scores
+          categoryScore += keywordScore;
+          categoryMatches.push({
+            keyword: keyword,
+            score: keywordScore
+          });
         }
+      });
+
+      if (categoryScore > highestScore) {
+        highestScore = categoryScore;
+        bestMatch = category;
+        matchedKeywords = categoryMatches;
       }
-      if (score > bestScore) {
-        bestScore = score;
-        bestCategory = category.category_name;
-      }
-    }
-    
-    return bestCategory;
+    });
+
+    // Return the complete result object that ResultDisplay expects
+    return {
+      category: bestMatch ? bestMatch.category_name : 'Unknown Category',
+      rackId: bestMatch ? bestMatch.rack_id : 'N/A',
+      confidence: Math.min(Math.round((highestScore / 10) * 100), 100), // Calculate confidence percentage
+      matchedKeywords: matchedKeywords.sort((a, b) => b.score - a.score) // Sort by score descending
+    };
     
   } catch (error) {
-    console.error('Categorization error:', error);
-    return '99-Kategori Tidak Diketahui';
+    console.error('Error categorizing book:', error);
+    return {
+      category: 'Error: Could not categorize',
+      rackId: 'N/A',
+      confidence: 0,
+      matchedKeywords: []
+    };
   }
 };
+
+
 
 export const cleanupOCR = async () => {
   if (worker) {
